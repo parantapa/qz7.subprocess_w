@@ -1,16 +1,19 @@
 from pathlib import Path
 from setuptools import setup
 
-package_name = Path(".").absolute().name
-
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-    description = long_description.strip()
-    description = description.split("\n")
-    description = description[0]
-    description = description.lstrip("#")
-    description = description.strip()
+    lines = long_description.strip()
+    lines = lines.split("\n")
+    lines = [line.strip() for line in lines]
+    lines = [line for line in lines if line]
+
+    package_name = lines[0].lstrip("#").strip()
+    print("package_name:", package_name)
+
+    description = lines[1]
+    print("description:", description)
 
 setup(
     name=package_name,
