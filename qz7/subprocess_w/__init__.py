@@ -6,17 +6,39 @@ that terminates gracefully instead of leaving zombie/orphan subprocesses.
 """
 
 import logging
-from subprocess import (
-    Popen, PIPE, STDOUT,
-    TimeoutExpired,
-    CalledProcessError,
-    CompletedProcess
-)
+from subprocess import (Popen, TimeoutExpired)
 
 log = logging.getLogger(__name__)
 
 DEFAULT_WAIT_TIMEOUT = 0
 DEFAULT_TERM_TIMEOUT = 30
+
+def terminate_gracefully(process,
+                         wait_timeout=DEFAULT_WAIT_TIMEOUT,
+                         term_timeout=DEFAULT_TERM_TIMEOUT):
+    """
+    Terminate the process gracefully.
+    """
+
+    try:
+        process.wait(timeout=wait_timeout)
+    except TimeoutExpired:
+        log.info("Terminating %d: %s", process.pid, process.args)
+        try:
+            process.terminate()
+        except ProcessLookupError:
+            return
+
+        try:
+            process.wait(timeout=term_timeout)
+        except TimeoutExpired:
+            log.warning("Killing %d: %s", process.pid, process.args)
+            try:
+                process.kill()
+            except ProcessLookupError:
+                return
+
+            process.wait()
 
 class PopenW(Popen):
     """
@@ -27,7 +49,7 @@ class PopenW(Popen):
         super().__init__(*args, **kwargs)
 
         log.info("Starting %d: %s", self.pid, self.args)
-        self._log_dead = True
+        self._log_exited = True
 
     def is_dead(self):
         """
@@ -35,9 +57,9 @@ class PopenW(Popen):
         """
 
         if self.poll() is not None:
-            if self._log_dead:
+            if self._log_exited:
                 log.info("Exited %d: %s", self.pid, self.args)
-                self._log_dead = False
+                self._log_exited = False
 
             return True
 
@@ -50,23 +72,10 @@ class PopenW(Popen):
         Terminate the process gracefully.
         """
 
-        if self.poll() is not None:
-            if self._log_dead:
-                log.info("Exited %d: %s", self.pid, self.args)
-                self._log_dead = False
+        if self.is_dead():
             return
 
-        try:
-            self.wait(timeout=wait_timeout)
-        except TimeoutExpired:
-            log.info("Terminating %d: %s", self.pid, self.args)
-            self.terminate()
-            try:
-                self.wait(timeout=term_timeout)
-            except TimeoutExpired:
-                log.warning("Killing %d: %s", self.pid, self.args)
-                self.kill()
-                self.wait()
+        terminate_gracefully(self, wait_timeout, term_timeout)
 
     def __enter__(self):
         return self
