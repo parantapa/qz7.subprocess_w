@@ -6,16 +6,17 @@ that terminates gracefully instead of leaving zombie/orphan subprocesses.
 """
 
 import logging
-from subprocess import (Popen, TimeoutExpired)
+from subprocess import Popen, TimeoutExpired
 
 log = logging.getLogger(__name__)
 
 DEFAULT_WAIT_TIMEOUT = 0
 DEFAULT_TERM_TIMEOUT = 30
 
-def terminate_gracefully(process,
-                         wait_timeout=DEFAULT_WAIT_TIMEOUT,
-                         term_timeout=DEFAULT_TERM_TIMEOUT):
+
+def terminate_gracefully(
+    process, wait_timeout=DEFAULT_WAIT_TIMEOUT, term_timeout=DEFAULT_TERM_TIMEOUT
+):
     """
     Terminate the process gracefully.
     """
@@ -39,6 +40,7 @@ def terminate_gracefully(process,
                 return
 
             process.wait()
+
 
 class PopenW(Popen):
     """
@@ -65,9 +67,9 @@ class PopenW(Popen):
 
         return False
 
-    def terminate_gracefully(self,
-                             wait_timeout=DEFAULT_WAIT_TIMEOUT,
-                             term_timeout=DEFAULT_TERM_TIMEOUT):
+    def terminate_gracefully(
+        self, wait_timeout=DEFAULT_WAIT_TIMEOUT, term_timeout=DEFAULT_TERM_TIMEOUT
+    ):
         """
         Terminate the process gracefully.
         """
